@@ -1,0 +1,2 @@
+import {SiteShell} from "@/components/site-shell";import {ContentBrowser} from "@/components/content-browser";import {PageHero} from "@/components/page-frame";import {content} from "@/lib/portal";
+export default function SearchPage(){return <SiteShell><PageHero eyebrow="الخدمات الرقمية" title="البحث في البوابة" intro="ابحث بالكلمة أو استخدم تصنيفات المحتوى للوصول إلى ما تحتاجه."/><section className="listing-page"><ContentBrowser items={content} label="المحتوى"/></section></SiteShell>}

@@ -1,0 +1,1 @@
+CREATE INDEX `idx_portal_content_type_status_published` ON `portal_content` (`type`,`status`,`published_at`);

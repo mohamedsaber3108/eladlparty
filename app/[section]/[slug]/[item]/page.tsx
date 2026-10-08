@@ -1,0 +1,2 @@
+import {SiteShell} from "@/components/site-shell";import {DetailBody} from "@/components/page-frame";import {DynamicDetail} from "@/components/dynamic-detail";import {content} from "@/lib/portal";
+export default async function NestedDetail({params}:{params:Promise<{section:string;slug:string;item:string}>}){const{slug,item}=await params;const x=content.find(v=>v.slug===item&&v.type===slug);return <SiteShell>{x?<DetailBody item={x}/>:<section className="listing-page"><DynamicDetail slug={item}/></section>}</SiteShell>}

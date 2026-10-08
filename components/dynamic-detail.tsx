@@ -1,0 +1,3 @@
+"use client";
+import {useEffect,useState} from "react";import {DetailBody,EmptyState} from "./page-frame";import type {PortalItem} from "@/lib/portal";
+export function DynamicDetail({slug}:{slug:string}){const[item,setItem]=useState<PortalItem|null>(null),[loaded,setLoaded]=useState(false);useEffect(()=>{fetch(`/api/content?slug=${encodeURIComponent(slug)}`).then(r=>r.json()).then(x=>setItem(x.items?.[0]||null)).finally(()=>setLoaded(true))},[slug]);if(!loaded)return <div className="detail-loading">جاري تحميل المحتوى…</div>;return item?<DetailBody item={item}/>:<EmptyState title="المحتوى غير متاح" text="قد يكون هذا الرابط غير صحيح أو أن المحتوى لم يُنشر بعد."/>}
