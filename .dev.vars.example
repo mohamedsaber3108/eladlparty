@@ -1,1 +1,22 @@
 ADMIN_TOKEN=replace-with-a-long-random-admin-token
+
+# Required for the new staff auth (magic link + session cookies). Generate with
+# `openssl rand -hex 32` or similar. Rotating this invalidates all active sessions.
+SESSION_SECRET=replace-with-a-long-random-session-secret
+
+# Base URL used to build magic-link verification links in outgoing email.
+PUBLIC_BASE_URL=http://localhost:5173
+
+# Optional: transactional email provider. Omit to keep the safe logging no-op adapter
+# (magic links/notifications are logged to the console instead of sent).
+# EMAIL_PROVIDER=resend
+# EMAIL_API_KEY=replace-with-a-real-provider-api-key
+# EMAIL_FROM=notifications@example.com
+
+# Optional: Cloudflare Turnstile secret for public form bot protection. Not yet
+# verified by any route until a site/secret key pair is provisioned (see docs/SECURITY.md).
+# TURNSTILE_SECRET_KEY=replace-with-a-turnstile-secret-key
+
+# Optional: AI provider key for richer assistant answers. The assistant works correctly
+# without this (keyword retrieval over approved knowledge only); see docs/SECURITY.md.
+# AI_PROVIDER_API_KEY=replace-with-an-ai-provider-api-key

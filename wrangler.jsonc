@@ -1,0 +1,20 @@
+{
+  // Minimal Wrangler config used only for CLI tooling (`wrangler d1 migrations apply`,
+  // the bootstrap-admin script). The actual dev/build pipeline configures its D1/R2
+  // bindings inline in vite.config.ts via @cloudflare/vite-plugin and does not read this
+  // file. Keep `database_id` as a placeholder locally; production deployments must set
+  // the real D1 database id (and R2 bucket, once provisioned) through the hosting
+  // control plane's own configuration, not by editing this file with real production
+  // identifiers.
+  "name": "site-creator-vinext-starter",
+  "compatibility_date": "2026-05-15",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "site-creator-d1",
+      "database_id": "00000000-0000-4000-8000-000000000000",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}
