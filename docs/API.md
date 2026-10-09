@@ -98,6 +98,58 @@ All admin endpoints require `requireStaff(request, permission)` — see `docs/AU
 | POST | `/api/v1/admin/observatory/problems/:id/evidence` | `observatory.manage` | Attach a citation/source. |
 | POST | `/api/v1/admin/jobs/drain` | `settings.manage` | Manually drains the notification/search-index/knowledge-ingest outbox and runs the scheduled-publish sweep. See `docs/OPERATIONS_RUNBOOK.md` for why this is manual. |
 
+## Membership (additive — spec §15)
+
+Membership requires its own explicit application + consent path, separate from the Secretariat intake endpoints above.
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/v1/membership/fees` | Current public fee display only. |
+| GET | `/api/v1/branches` | Active branches. |
+| GET | `/api/v1/branches/:slug` | |
+| POST | `/api/v1/membership/applications` | Body: name, email, phone, governorate, profile fields, `profilePhotoAssetId` (must be a pre-confirmed storage asset — see Known Gaps in `docs/FEATURE_BACKEND_MATRIX.md`), `consent`, `idempotencyKey` (required; replays return the same reference instead of duplicating). Honeypot + rate-limited 5/10min/IP. |
+| PATCH | `/api/v1/membership/applications/:reference/draft` | Requires the verified applicant-access cookie (see below). Only while `draft`/`requires_action`. |
+| POST | `/api/v1/membership/applications/:reference/verify` | Body `{email}` requests a one-time access link (always 200, no enumeration); body `{token}` consumes it and sets the `eladl_applicant_access` cookie (HttpOnly, 30 min). |
+| GET | `/api/v1/membership/applications/:reference` | Requires verified applicant-access cookie scoped to that reference. Public-safe status view only — never internal notes. |
+| POST | `/api/v1/membership/applications/:reference/actions/:id` | Applicant completes a staff-requested action. Requires verified access. |
+| GET | `/api/v1/membership/cards/current` | Requires verified applicant/member access (reference resolved from the cookie, not the URL). |
+| POST | `/api/v1/membership/cards/:id/share-link` | Body `{action: "create"\|"revoke"}`. Ownership-checked against the cookie's reference. |
+| GET | `/api/v1/membership/share/:token` | Public. Returns only `memberDisplayName`, `membershipStatus`, `branchName`, `issuedYear` — fails immediately if the card is revoked or the membership isn't active. |
+
+### Membership admin (staff session + permission required)
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/api/v1/admin/membership` | `membership.review` | `?status=` filter. |
+| GET | `/api/v1/admin/membership/:id` | `membership.review` | Full detail: profile, files, history, open action requests. |
+| POST | `/api/v1/admin/membership/:id/decide` | action-specific — see below | Runs one state-machine transition. |
+| GET | `/api/v1/admin/membership/export` | `membership.export` | Audit-logged on every call. |
+| GET/POST | `/api/v1/admin/branches` | `branch.manage` | Upsert by slug. |
+| GET/POST | `/api/v1/admin/membership-fees` | `fees.manage` | New rule closes out the previous one's `effectiveTo`; history is immutable. |
+| GET/POST | `/api/v1/admin/card-templates` | `card_template.manage` | Only one template active at a time. |
+
+`POST /api/v1/admin/membership/:id/decide` requires a **different permission per action**, not just `membership.review`:
+
+| Action | Required permission |
+|---|---|
+| `assign_reviewer`, `request_action`, `accept_in_principle`, `reject`, `select_branch`, `suspend_membership`, `revoke_membership` | `membership.decide` |
+| `mark_fee_paid`, `mark_fee_waived`, `verify_documents`, `book_appointment`, `mark_attended`, `complete` | `membership.complete` |
+| `issue_card` | `membership.card.issue` |
+
+This is how `branch_staff` (who only holds `membership.complete`) can run the in-person completion steps but gets a 403 trying to accept/reject an application or issue a card — enforced server-side per action, not just per route.
+
+## Issue Intelligence / Monitoring (additive — spec §15.5)
+
+| Method | Path | Permission | Notes |
+|---|---|---|---|
+| GET | `/api/v1/observatory/monitoring` | public | Only `visibility=public AND verificationState=verified` items; always carries source name, date, and verification state. |
+| GET | `/api/v1/discussion-topics` | public | Only `publicStatus=open` topics. |
+| GET/POST | `/api/v1/admin/monitoring/sources` | `monitoring.manage_sources` | A source can only be `active` if `legalReviewStatus=approved` (enforced server-side). |
+| GET/POST | `/api/v1/admin/monitoring/ingestions` | `monitoring.review` (GET) / `monitoring.manage_sources` (POST) | Manual-entry only in this release — no scheduled poller. Always creates a private `candidate` record; duplicate-detected by content hash. |
+| GET/POST | `/api/v1/admin/monitoring/items` | `monitoring.review` | Analyst promotes a candidate into a structured item; always starts private + unverified. |
+| POST | `/api/v1/admin/monitoring/items/:id/review` | `monitoring.review` | The only path to `visibility=public` — hard-blocked unless `verificationState=verified`. |
+| GET/POST | `/api/v1/admin/discussion-topics`, PATCH `/:id` | `discussion.moderate` | |
+
 ## Error codes
 
 | Status | Meaning |

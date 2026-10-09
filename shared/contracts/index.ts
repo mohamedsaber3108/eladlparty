@@ -7,3 +7,5 @@ export * from "./media";
 export * from "./assistant";
 export * from "./auth";
 export * from "./admin";
+export * from "./membership";
+export * from "./monitoring";

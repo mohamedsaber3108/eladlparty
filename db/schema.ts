@@ -884,3 +884,308 @@ export const outboxJobs = sqliteTable(
   },
   (t) => [index("idx_outbox_jobs_status_available").on(t.status, t.availableAt)]
 );
+
+// ============================================================================
+// Section 15 additive schema (ELADL_PORTAL_BACKEND_IMPLEMENTATION_PROMPT (2).md
+// §15): party membership application lifecycle, branches, fees, cards, and the
+// Issue Intelligence / monitoring engine. Purely additive — does not touch or
+// replace the existing Secretariat participation flows (intake_cases etc.)
+// above. Membership requires its own explicit application + consent path.
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// 8. Membership: branches, fees, applications, cards
+// ---------------------------------------------------------------------------
+
+export const partyBranches = sqliteTable(
+  "party_branches",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    governorate: text("governorate").notNull(),
+    slug: text("slug").notNull(),
+    nameAr: text("name_ar").notNull(),
+    nameEn: text("name_en"),
+    addressAr: text("address_ar"),
+    addressEn: text("address_en"),
+    lat: real("lat"),
+    lng: real("lng"),
+    contactsJson: text("contacts_json").notNull().default("{}"),
+    officeHoursJson: text("office_hours_json").notNull().default("{}"),
+    completionServicesJson: text("completion_services_json").notNull().default("[]"),
+    active: integer("active").notNull().default(1),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("idx_party_branches_slug").on(t.slug)]
+);
+
+export const membershipFeeRules = sqliteTable(
+  "membership_fee_rules",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    amount: integer("amount").notNull(),
+    currency: text("currency").notNull().default("EGP"),
+    effectiveFrom: text("effective_from").notNull(),
+    effectiveTo: text("effective_to"),
+    waiverRulesJson: text("waiver_rules_json").notNull().default("{}"),
+    active: integer("active").notNull().default(1),
+    setBy: integer("set_by"),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("idx_membership_fee_rules_active_from").on(t.active, t.effectiveFrom)]
+);
+
+export const membershipApplications = sqliteTable(
+  "membership_applications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    publicReference: text("public_reference").notNull(),
+    contactId: integer("contact_id").notNull(),
+    applicationStatus: text("application_status").notNull().default("draft"),
+    // draft|submitted|under_review|requires_action|accepted_in_principle|rejected|
+    // branch_completion_pending|fee_pending|documents_pending|appointment_booked|
+    // completed|card_issued|active|suspended|expired|revoked
+    requestedGovernorate: text("requested_governorate"),
+    recommendedBranchId: integer("recommended_branch_id"),
+    reviewOwnerId: integer("review_owner_id"),
+    submittedAt: text("submitted_at"),
+    reviewedAt: text("reviewed_at"),
+    decisionAt: text("decision_at"),
+    paymentStatus: text("payment_status").notNull().default("not_applicable"), // not_applicable|pay_at_branch_pending|paid|waived
+    completionStatus: text("completion_status").notNull().default("not_started"), // not_started|in_progress|completed
+    consentVersion: text("consent_version"),
+    verificationTokenHash: text("verification_token_hash"),
+    verificationExpiresAt: text("verification_expires_at"),
+    idempotencyKey: text("idempotency_key"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("idx_membership_applications_reference").on(t.publicReference),
+    index("idx_membership_applications_status").on(t.applicationStatus),
+    uniqueIndex("idx_membership_applications_idempotency").on(t.idempotencyKey),
+  ]
+);
+
+export const membershipApplicationProfile = sqliteTable(
+  "membership_application_profile",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    applicationId: integer("application_id").notNull(),
+    legalName: text("legal_name"),
+    dateOfBirth: text("date_of_birth"),
+    occupation: text("occupation"),
+    education: text("education"),
+    addressJson: text("address_json").notNull().default("{}"),
+    // Legal-ID fields are disabled (null) unless the Secretariat explicitly approves collecting
+    // them; the admin-configurable toggle lives in `settings` (key: membership.collect_legal_id).
+    legalIdNumber: text("legal_id_number"),
+    answersJson: text("answers_json").notNull().default("{}"),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [uniqueIndex("idx_membership_application_profile_application").on(t.applicationId)]
+);
+
+export const membershipApplicationFiles = sqliteTable(
+  "membership_application_files",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    applicationId: integer("application_id").notNull(),
+    storageAssetId: integer("storage_asset_id").notNull(),
+    fileType: text("file_type").notNull(), // profile_photo|identity_document|supporting_document
+    verificationStatus: text("verification_status").notNull().default("pending"), // pending|verified|rejected
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("idx_membership_application_files_application").on(t.applicationId)]
+);
+
+export const membershipStatusHistory = sqliteTable(
+  "membership_status_history",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    applicationId: integer("application_id").notNull(),
+    status: text("status").notNull(),
+    publicMessage: text("public_message"),
+    internalNote: text("internal_note"),
+    actorUserId: integer("actor_user_id"),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("idx_membership_status_history_application").on(t.applicationId, t.createdAt)]
+);
+
+export const membershipActionRequests = sqliteTable(
+  "membership_action_requests",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    applicationId: integer("application_id").notNull(),
+    requestedFieldsJson: text("requested_fields_json").notNull().default("[]"),
+    publicInstructions: text("public_instructions").notNull(),
+    dueDate: text("due_date"),
+    resolvedAt: text("resolved_at"),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("idx_membership_action_requests_application").on(t.applicationId)]
+);
+
+export const membershipCompletionAppointments = sqliteTable(
+  "membership_completion_appointments",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    applicationId: integer("application_id").notNull(),
+    branchId: integer("branch_id").notNull(),
+    scheduledAt: text("scheduled_at"),
+    status: text("status").notNull().default("pending"), // pending|confirmed|attended|no_show|cancelled
+    attendance: text("attendance"),
+    staffNotes: text("staff_notes"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [index("idx_membership_completion_appointments_application").on(t.applicationId)]
+);
+
+export const memberships = sqliteTable(
+  "memberships",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    applicationId: integer("application_id").notNull(),
+    membershipNumber: text("membership_number").notNull(),
+    status: text("status").notNull().default("active"), // active|suspended|expired|revoked
+    issuedAt: text("issued_at").notNull(),
+    expiresAt: text("expires_at"),
+    branchId: integer("branch_id").notNull(),
+    completedAt: text("completed_at").notNull(),
+  },
+  (t) => [
+    uniqueIndex("idx_memberships_number").on(t.membershipNumber),
+    uniqueIndex("idx_memberships_application").on(t.applicationId),
+  ]
+);
+
+export const membershipCardTemplates = sqliteTable(
+  "membership_card_templates",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name").notNull(),
+    version: integer("version").notNull(),
+    layoutConfigJson: text("layout_config_json").notNull().default("{}"),
+    allowedPublicFieldsJson: text("allowed_public_fields_json").notNull().default("[]"),
+    locale: text("locale").notNull().default("ar"),
+    active: integer("active").notNull().default(0),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [uniqueIndex("idx_membership_card_templates_name_version").on(t.name, t.version)]
+);
+
+export const membershipCards = sqliteTable(
+  "membership_cards",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    membershipId: integer("membership_id").notNull(),
+    templateVersion: integer("template_version").notNull(),
+    renderAssetId: integer("render_asset_id"),
+    publicShareTokenHash: text("public_share_token_hash"),
+    shareEnabled: integer("share_enabled").notNull().default(0),
+    issuedAt: text("issued_at").notNull(),
+    revokedAt: text("revoked_at"),
+  },
+  (t) => [
+    uniqueIndex("idx_membership_cards_membership").on(t.membershipId),
+    uniqueIndex("idx_membership_cards_share_token_hash").on(t.publicShareTokenHash),
+  ]
+);
+
+export const membershipShareEvents = sqliteTable(
+  "membership_share_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    membershipCardId: integer("membership_card_id").notNull(),
+    channel: text("channel").notNull().default("link"), // link|whatsapp|other
+    anonymizedAttribution: text("anonymized_attribution"),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("idx_membership_share_events_card").on(t.membershipCardId)]
+);
+
+// ---------------------------------------------------------------------------
+// 9. Issue Intelligence / monitoring engine + discussion topics
+// ---------------------------------------------------------------------------
+
+export const monitoringSources = sqliteTable(
+  "monitoring_sources",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    name: text("name").notNull(),
+    sourceType: text("source_type").notNull().default("manual"), // rss|official_website|approved_api|manual
+    configSecretRef: text("config_secret_ref"),
+    topicScope: text("topic_scope"),
+    language: text("language").notNull().default("ar"),
+    legalReviewStatus: text("legal_review_status").notNull().default("pending"), // pending|approved|rejected
+    active: integer("active").notNull().default(0),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  }
+);
+
+export const monitoringIngestions = sqliteTable(
+  "monitoring_ingestions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sourceId: integer("source_id").notNull(),
+    externalUrl: text("external_url"),
+    externalId: text("external_id"),
+    headline: text("headline").notNull(),
+    permittedExcerpt: text("permitted_excerpt"),
+    publicationDate: text("publication_date"),
+    rawMetadataHash: text("raw_metadata_hash"),
+    ingestionStatus: text("ingestion_status").notNull().default("candidate"), // candidate|reviewed|promoted|rejected|duplicate
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("idx_monitoring_ingestions_source_status").on(t.sourceId, t.ingestionStatus)]
+);
+
+export const monitoringItems = sqliteTable(
+  "monitoring_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    ingestionId: integer("ingestion_id").notNull(),
+    itemType: text("item_type").notNull().default("news"), // news|report|issue|data_point
+    relevanceScore: integer("relevance_score").notNull().default(0),
+    sector: text("sector"),
+    governorate: text("governorate"),
+    verificationState: text("verification_state").notNull().default("unverified"), // unverified|verified|rejected
+    analystOwnerId: integer("analyst_owner_id"),
+    visibility: text("visibility").notNull().default("private"), // private|public
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [index("idx_monitoring_items_visibility_state").on(t.visibility, t.verificationState)]
+);
+
+export const monitoringItemLinks = sqliteTable(
+  "monitoring_item_links",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    monitoringItemId: integer("monitoring_item_id").notNull(),
+    linkedType: text("linked_type").notNull(), // problem|solution|policy|report|event|program|discussion_topic
+    linkedId: integer("linked_id").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("idx_monitoring_item_links_item").on(t.monitoringItemId)]
+);
+
+export const discussionTopics = sqliteTable(
+  "discussion_topics",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    title: text("title").notNull(),
+    linkedMonitoringItemId: integer("linked_monitoring_item_id"),
+    publicStatus: text("public_status").notNull().default("draft"), // draft|open|closed|archived
+    startsAt: text("starts_at"),
+    endsAt: text("ends_at"),
+    moderationPolicy: text("moderation_policy").notNull().default("form_only"), // form_only|moderated_comments
+    outcomeContentEntryId: integer("outcome_content_entry_id"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [index("idx_discussion_topics_status").on(t.publicStatus)]
+);

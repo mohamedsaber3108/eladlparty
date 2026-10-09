@@ -41,6 +41,8 @@ const roles = [
   ["observatory_analyst", "محلل مرصد"],
   ["media_manager", "مدير وسائط"],
   ["viewer", "مستعرض"],
+  ["membership_officer", "مسؤول عضوية"],
+  ["branch_staff", "موظف فرع"],
 ];
 
 const now = new Date().toISOString();

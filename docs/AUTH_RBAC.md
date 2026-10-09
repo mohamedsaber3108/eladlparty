@@ -36,8 +36,14 @@ Roles are stored in `roles`/`user_roles`; permissions are **not** stored per-row
 | `observatory_analyst` | `observatory.manage`, `analytics.view` |
 | `media_manager` | `media.upload`, `media.delete` |
 | `viewer` | `analytics.view` only |
+| `membership_officer` (additive, spec §15) | `membership.review`, `membership.decide`, `membership.complete`, `membership.card.issue`, `membership.export` — full membership-pipeline control |
+| `branch_staff` (additive, spec §15) | `membership.complete` only — can run fee/document/appointment/completion steps but **cannot** accept/reject an application or issue a card |
 
-Full permission key list: `content.create`, `content.update`, `content.publish`, `content.delete`, `content.translate`, `events.manage`, `programs.manage`, `opportunities.manage`, `partners.manage`, `observatory.manage`, `submission.view`, `submission.assign`, `submission.update`, `media.upload`, `media.delete`, `knowledge.manage`, `users.manage`, `roles.manage`, `settings.manage`, `audit.view`, `analytics.view`.
+Full permission key list: `content.create`, `content.update`, `content.publish`, `content.delete`, `content.translate`, `events.manage`, `programs.manage`, `opportunities.manage`, `partners.manage`, `observatory.manage`, `submission.view`, `submission.assign`, `submission.update`, `media.upload`, `media.delete`, `knowledge.manage`, `users.manage`, `roles.manage`, `settings.manage`, `audit.view`, `analytics.view`, `membership.review`, `membership.decide`, `membership.complete`, `membership.card.issue`, `membership.export`, `branch.manage`, `fees.manage`, `card_template.manage`, `monitoring.manage_sources`, `monitoring.review`, `discussion.moderate`.
+
+### Action-level permission checks (membership decisions)
+
+`POST /api/v1/admin/membership/:id/decide` is the one route in the system where a single endpoint requires **different permissions depending on the request body**, not just one permission for the whole route. This is intentional: `branch_staff` needs to perform in-person completion steps (fee/documents/appointment) without ever being able to accept, reject, or issue a card for an application. The route resolves the requested `action` first, looks up the specific permission it needs from a static map, and checks that — see `app/api/v1/admin/membership/[id]/decide/route.ts` and `docs/API.md`'s per-action permission table.
 
 ### Enforcement
 
@@ -62,6 +68,15 @@ pnpm bootstrap:admin:remote --email you@example.com  # against the real Cloudfla
 ```
 
 This seeds the 8 roles (idempotent) and creates/promotes a `users` row with the `super_admin` role via `wrangler d1 execute` and a generated idempotent SQL script (`scripts/bootstrap-admin.mjs`). No secret or password is written anywhere — the new super_admin signs in via the normal magic-link flow once created. Verified working end-to-end against a local D1 instance during this implementation (see `docs/OPERATIONS_RUNBOOK.md`).
+
+## Applicant access (membership, additive — spec §15)
+
+Membership applicants are **not** staff and never get a `eladl_session` cookie or RBAC permissions. They get a separate, narrower mechanism:
+
+1. `POST /api/v1/membership/applications/:reference/verify` with `{email}` issues a one-time token (SHA-256-hashed before storage in `membership_applications.verificationTokenHash`, 15-minute TTL) and emails a link via the same outbox/email-adapter path used elsewhere. Always returns 200 regardless of whether the reference/email pair matches — no enumeration.
+2. The same endpoint, called with `{token}` instead, consumes the token (one-time — the hash is cleared immediately so it cannot be replayed) and sets a distinct `eladl_applicant_access` cookie: `HttpOnly; Secure; SameSite=Strict`, HMAC-signed (reusing `SESSION_SECRET` — see the note in `docs/FEATURE_BACKEND_MATRIX.md`'s Known Gaps), 30-minute `Max-Age`. The cookie's signed payload embeds the application's reference and expiry — nothing else.
+3. Every subsequent membership endpoint that needs applicant identity (`GET .../applications/:reference`, `PATCH .../draft`, `POST .../actions/:id`, `GET /membership/cards/current`, `POST /membership/cards/:id/share-link`) checks this cookie, not the staff session. `assertApplicantAccess` additionally verifies the cookie's embedded reference matches the one in the URL (where a URL reference is present) — one applicant cannot read or act on another application by guessing a reference, since the cookie is bound to exactly one reference at verification time.
+4. There is no "applicant login" beyond this — no password, no long-lived session, no account. A new access link must be requested each time the 30-minute window lapses.
 
 ## Session lifecycle
 
