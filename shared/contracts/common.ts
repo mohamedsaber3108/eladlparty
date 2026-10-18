@@ -86,7 +86,13 @@ export const consentSchema = z.object({
   }),
 });
 
-/** Honeypot field: must stay empty. Present on every public form payload. */
+/**
+ * Honeypot field: real users leave it empty; bots that fill every field trip it.
+ * Deliberately accepts any string (no max-length validation) so a non-empty value never
+ * surfaces as a 400 validation error — that would reveal the anti-abuse mechanism to the bot.
+ * `guardPublicWrite` is the sole gate that inspects this value and routes it to a fake-success
+ * response instead.
+ */
 export const honeypotSchema = z.object({
-  website: z.string().max(0).optional().default(""),
+  website: z.string().optional().default(""),
 });

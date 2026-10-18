@@ -15,7 +15,12 @@
     "db:migrate:local": "wrangler d1 migrations apply site-creator-d1 --local",
     "db:migrate:remote": "wrangler d1 migrations apply site-creator-d1 --remote",
     "bootstrap:admin:local": "node scripts/bootstrap-admin.mjs --local",
-    "bootstrap:admin:remote": "node scripts/bootstrap-admin.mjs"
+    "bootstrap:admin:remote": "node scripts/bootstrap-admin.mjs",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -46,12 +51,14 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
     "@cloudflare/workers-types": "4.20260515.1",
+    "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
+    "@vitest/coverage-v8": "3.2.4",
     "drizzle-kit": "0.31.10",
     "eslint": "9.39.4",
     "eslint-config-next": "16.3.4",
@@ -61,6 +68,7 @@
     "typescript": "5.9.3",
     "vinext": "1.0.0-beta.5",
     "vite": "8.0.13",
+    "vitest": "3.2.4",
     "wrangler": "4.92.0"
   },
   "type": "module",

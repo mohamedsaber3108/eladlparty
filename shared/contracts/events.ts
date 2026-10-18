@@ -47,7 +47,7 @@ export const eventRegistrationInputSchema = z.object({
   governorate: z.string().trim().min(2).max(60).optional(),
   answers: z.record(z.string(), z.unknown()).optional().default({}),
   consent: z.literal(true),
-  website: z.string().max(0).optional().default(""),
+  website: z.string().optional().default(""),
 });
 export type EventRegistrationInput = z.infer<typeof eventRegistrationInputSchema>;
 
