@@ -14,7 +14,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ref
   const requestId = requestIdFrom(request);
   try {
     const { reference } = await params;
-    const raw = await request.clone().json().catch(() => ({}));
+    const raw = (await request.clone().json().catch(() => ({}))) as Record<string, unknown>;
 
     if ("token" in raw) {
       const { token } = membershipVerifyConsumeSchema.parse(raw);
