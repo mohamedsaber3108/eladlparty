@@ -1,21 +1,18 @@
 #!/usr/bin/env node
 /**
  * Bootstraps the roles/permissions catalogue and an initial super_admin user against the
- * project's D1 database via `wrangler d1 execute`. No secret is committed to Git — the
- * super-admin's email is passed as a CLI argument and the account signs in via magic link
- * (there is no password to set).
+ * project's Postgres database. No secret is committed to Git — the super-admin's email is
+ * passed as a CLI argument and the account signs in via magic link (there is no password to
+ * set).
  *
  * Usage:
- *   node scripts/bootstrap-admin.mjs --email you@example.com [--local] [--db-name site-creator-d1]
+ *   node scripts/bootstrap-admin.mjs --email you@example.com
  *
- * `--local` targets the local Miniflare D1 simulation used by `pnpm start`/`wrangler dev`.
- * Omit it to target the remote/production D1 database bound to this Cloudflare account
- * (requires `wrangler login` first).
+ * Reads DATABASE_URL from the environment (.env.local in development, or the real Neon
+ * connection string in CI/production). Run `dotenv -e .env.local -- node scripts/bootstrap-admin.mjs ...`
+ * or export DATABASE_URL directly before invoking this script.
  */
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
+import { Client } from "pg";
 
 const args = process.argv.slice(2);
 function flag(name, fallback) {
@@ -24,11 +21,14 @@ function flag(name, fallback) {
 }
 
 const email = flag("email");
-const local = args.includes("--local");
-const dbName = flag("db-name", "site-creator-d1");
 
 if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-  console.error("Usage: node scripts/bootstrap-admin.mjs --email you@example.com [--local] [--db-name site-creator-d1]");
+  console.error("Usage: node scripts/bootstrap-admin.mjs --email you@example.com");
+  process.exit(1);
+}
+
+if (!process.env.DATABASE_URL) {
+  console.error("DATABASE_URL is not set. Export it (or load .env.local) before running this script.");
   process.exit(1);
 }
 
@@ -46,38 +46,51 @@ const roles = [
 ];
 
 const now = new Date().toISOString();
-const roleInserts = roles.map(([key, label]) => `INSERT INTO roles (key, label, created_at) SELECT '${key}', '${label}', '${now}' WHERE NOT EXISTS (SELECT 1 FROM roles WHERE key = '${key}');`).join("\n");
+const normalizedEmail = email.toLowerCase();
 
-const sql = `
-${roleInserts}
+const client = new Client({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL.includes("sslmode=require") ? { rejectUnauthorized: false } : undefined,
+});
 
-INSERT INTO users (email, display_name, status, locale, created_at, updated_at)
-SELECT '${email.toLowerCase()}', 'Super Admin', 'invited', 'ar', '${now}', '${now}'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = '${email.toLowerCase()}');
+try {
+  await client.connect();
+  await client.query("BEGIN");
 
-INSERT INTO user_roles (user_id, role_id, assigned_at)
-SELECT u.id, r.id, '${now}'
-FROM users u, roles r
-WHERE u.email = '${email.toLowerCase()}' AND r.key = 'super_admin'
-AND NOT EXISTS (
-  SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id
-);
-`.trim();
+  for (const [key, label] of roles) {
+    await client.query(
+      `INSERT INTO roles (key, label, created_at)
+       SELECT $1, $2, $3
+       WHERE NOT EXISTS (SELECT 1 FROM roles WHERE key = $1)`,
+      [key, label, now]
+    );
+  }
 
-const tmpDir = mkdtempSync(path.join(tmpdir(), "eladl-bootstrap-"));
-const sqlFile = path.join(tmpDir, "bootstrap.sql");
-writeFileSync(sqlFile, sql, "utf8");
+  await client.query(
+    `INSERT INTO users (email, display_name, status, locale, created_at, updated_at)
+     SELECT $1, 'Super Admin', 'invited', 'ar', $2, $2
+     WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = $1)`,
+    [normalizedEmail, now]
+  );
 
-const wranglerArgs = ["d1", "execute", dbName, local ? "--local" : "--remote", "--file", sqlFile];
-console.log(`Running: wrangler ${wranglerArgs.join(" ")}`);
+  await client.query(
+    `INSERT INTO user_roles (user_id, role_id, assigned_at)
+     SELECT u.id, r.id, $2
+     FROM users u, roles r
+     WHERE u.email = $1 AND r.key = 'super_admin'
+       AND NOT EXISTS (
+         SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_id = r.id
+       )`,
+    [normalizedEmail, now]
+  );
 
-const result = spawnSync("npx", ["wrangler", ...wranglerArgs], { stdio: "inherit", shell: true });
-rmSync(tmpDir, { recursive: true, force: true });
-
-if (result.status !== 0) {
-  console.error("Bootstrap failed. Review the wrangler output above.");
-  process.exit(result.status ?? 1);
+  await client.query("COMMIT");
+  console.log(`\nDone. ${normalizedEmail} now has the super_admin role.`);
+  console.log("Sign in at /admin and request a magic link for that email to start your session.");
+} catch (error) {
+  await client.query("ROLLBACK").catch(() => {});
+  console.error("Bootstrap failed:", error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+} finally {
+  await client.end();
 }
-
-console.log(`\nDone. ${email} now has the super_admin role.`);
-console.log("Sign in at /admin and request a magic link for that email to start your session.");

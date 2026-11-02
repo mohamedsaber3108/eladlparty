@@ -3,7 +3,7 @@ import { getDb, nowIso } from "@/server/repositories/db";
 import * as schema from "@/db/schema";
 import { NotFoundError } from "@/server/http/errors";
 import { recordAuditLog } from "@/server/services/audit-service";
-import { enqueueOutboxJob } from "@/server/jobs/outbox";
+import { enqueueJob } from "@/server/jobs/queue";
 
 export async function listKnowledgeEntries() {
   const db = getDb();
@@ -30,7 +30,7 @@ export async function approveKnowledgeEntry(id: number, actorId: number | null) 
     .insert(schema.assistantKnowledgeSources)
     .values({ sourceType: "faq", entryId: null, locale: "ar", approved: 1, ingestionStatus: "pending", createdAt: now, updatedAt: now })
     .returning({ id: schema.assistantKnowledgeSources.id });
-  await enqueueOutboxJob("knowledge_ingest", { sourceId: sourceInserted[0].id });
+  await enqueueJob("knowledge_ingest", { sourceId: sourceInserted[0].id });
 
   await recordAuditLog({ actorUserId: actorId, action: "knowledge.approve", entityType: "knowledge_entries", entityId: id, requestId: null });
 }

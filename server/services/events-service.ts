@@ -3,8 +3,9 @@ import { getDb, generateReference, nowIso } from "@/server/repositories/db";
 import * as schema from "@/db/schema";
 import { ConflictError, NotFoundError } from "@/server/http/errors";
 import type { EventCard, EventDetail, EventListQuery, EventRegistrationInput } from "@/shared/contracts/events";
-import { enqueueOutboxJob } from "@/server/jobs/outbox";
+import { enqueueJob } from "@/server/jobs/queue";
 import { recordAuditLog } from "@/server/services/audit-service";
+import { clientIp } from "@/server/http/client-ip";
 
 async function toEventCard(event: typeof schema.events.$inferSelect, entry: typeof schema.contentEntries.$inferSelect): Promise<EventCard> {
   let capacityRemaining: number | null = null;
@@ -146,13 +147,13 @@ export async function registerForEvent(eventSlug: string, locale: "ar" | "en", i
     updatedAt: now,
   });
 
-  await enqueueOutboxJob("notification", {
+  await enqueueJob("notification", {
     to: input.email,
     subject: status === "confirmed" ? "تأكيد التسجيل في الفعالية" : "تم إدراجك في قائمة الانتظار",
     text: `الرقم المرجعي: ${reference}. الحالة: ${status === "confirmed" ? "مؤكد" : "قائمة انتظار"}.`,
   });
 
-  const ip = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for");
+  const ip = clientIp(request);
   await recordAuditLog({ actorUserId: null, action: "event.register", entityType: "event_registrations", entityId: reference, requestId: null, ip });
   return { reference, status };
 }

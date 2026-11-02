@@ -4,7 +4,7 @@ import { jsonOk, toErrorResponse, NotFoundError } from "@/server/http/errors";
 import { getDb, nowIso } from "@/server/repositories/db";
 import * as schema from "@/db/schema";
 import { localeSchema } from "@/shared/contracts/common";
-import { publicAssetUrl } from "@/server/storage/r2-storage";
+import { publicAssetUrl } from "@/server/storage/s3-storage";
 import { recordAuditLog } from "@/server/services/audit-service";
 
 /**

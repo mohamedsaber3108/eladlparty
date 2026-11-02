@@ -1,10 +1,10 @@
-import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-export const submissions=sqliteTable("submissions",{id:integer("id").primaryKey({autoIncrement:true}),kind:text("kind").notNull(),name:text("name"),email:text("email"),phone:text("phone"),governorate:text("governorate"),profession:text("profession"),participationType:text("participation_type"),linkedin:text("linkedin"),metadata:text("metadata").notNull().default("{}"),body:text("body").notNull(),status:text("status").notNull().default("new"),createdAt:text("created_at").notNull()},t=>[index("idx_submissions_kind_status_created").on(t.kind,t.status,t.createdAt)]);
-export const content=sqliteTable("content",{id:integer("id").primaryKey({autoIncrement:true}),type:text("type").notNull(),title:text("title").notNull(),summary:text("summary").notNull(),publishedAt:text("published_at").notNull(),status:text("status").notNull().default("draft")});
-export const portalContent=sqliteTable("portal_content",{id:integer("id").primaryKey({autoIncrement:true}),type:text("type").notNull(),slug:text("slug").notNull(),locale:text("locale").notNull().default("ar"),title:text("title").notNull(),excerpt:text("excerpt").notNull(),body:text("body").notNull(),category:text("category").notNull().default("عام"),tags:text("tags").notNull().default("[]"),coverImage:text("cover_image"),status:text("status").notNull().default("draft"),featured:integer("featured").notNull().default(0),publishedAt:text("published_at"),createdAt:text("created_at").notNull(),updatedAt:text("updated_at").notNull()},t=>[uniqueIndex("idx_portal_content_slug_locale").on(t.slug,t.locale),index("idx_portal_content_type_status_published").on(t.type,t.status,t.publishedAt)]);
-export const mediaAssets=sqliteTable("media_assets",{id:integer("id").primaryKey({autoIncrement:true}),kind:text("kind").notNull(),title:text("title").notNull(),url:text("url").notNull(),alt:text("alt"),createdAt:text("created_at").notNull()});
-export const knowledgeEntries=sqliteTable("knowledge_entries",{id:integer("id").primaryKey({autoIncrement:true}),question:text("question").notNull(),answer:text("answer").notNull(),status:text("status").notNull().default("published"),updatedAt:text("updated_at").notNull()});
-export const adminUsers=sqliteTable("admin_users",{id:integer("id").primaryKey({autoIncrement:true}),userId:text("user_id"),email:text("email").notNull(),role:text("role").notNull().default("editor"),createdAt:text("created_at").notNull()},t=>[uniqueIndex("idx_admin_users_email").on(t.email)]);
+import { index, integer, primaryKey, real, pgTable, serial, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core";
+export const submissions=pgTable("submissions",{id:serial("id").primaryKey(),kind:text("kind").notNull(),name:text("name"),email:text("email"),phone:text("phone"),governorate:text("governorate"),profession:text("profession"),participationType:text("participation_type"),linkedin:text("linkedin"),metadata:text("metadata").notNull().default("{}"),body:text("body").notNull(),status:text("status").notNull().default("new"),createdAt:text("created_at").notNull()},t=>[index("idx_submissions_kind_status_created").on(t.kind,t.status,t.createdAt)]);
+export const content=pgTable("content",{id:serial("id").primaryKey(),type:text("type").notNull(),title:text("title").notNull(),summary:text("summary").notNull(),publishedAt:text("published_at").notNull(),status:text("status").notNull().default("draft")});
+export const portalContent=pgTable("portal_content",{id:serial("id").primaryKey(),type:text("type").notNull(),slug:text("slug").notNull(),locale:text("locale").notNull().default("ar"),title:text("title").notNull(),excerpt:text("excerpt").notNull(),body:text("body").notNull(),category:text("category").notNull().default("عام"),tags:text("tags").notNull().default("[]"),coverImage:text("cover_image"),status:text("status").notNull().default("draft"),featured:integer("featured").notNull().default(0),publishedAt:text("published_at"),createdAt:text("created_at").notNull(),updatedAt:text("updated_at").notNull()},t=>[uniqueIndex("idx_portal_content_slug_locale").on(t.slug,t.locale),index("idx_portal_content_type_status_published").on(t.type,t.status,t.publishedAt)]);
+export const mediaAssets=pgTable("media_assets",{id:serial("id").primaryKey(),kind:text("kind").notNull(),title:text("title").notNull(),url:text("url").notNull(),alt:text("alt"),createdAt:text("created_at").notNull()});
+export const knowledgeEntries=pgTable("knowledge_entries",{id:serial("id").primaryKey(),question:text("question").notNull(),answer:text("answer").notNull(),status:text("status").notNull().default("published"),updatedAt:text("updated_at").notNull()});
+export const adminUsers=pgTable("admin_users",{id:serial("id").primaryKey(),userId:text("user_id"),email:text("email").notNull(),role:text("role").notNull().default("editor"),createdAt:text("created_at").notNull()},t=>[uniqueIndex("idx_admin_users_email").on(t.email)]);
 
 // ============================================================================
 // Backend overhaul schema (ELADL_PORTAL_BACKEND_IMPLEMENTATION_PROMPT.md).
@@ -19,10 +19,10 @@ export const adminUsers=sqliteTable("admin_users",{id:integer("id").primaryKey({
 // 1. Identity & governance
 // ---------------------------------------------------------------------------
 
-export const users = sqliteTable(
+export const users = pgTable(
   "users",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     email: text("email").notNull(),
     displayName: text("display_name"),
     status: text("status").notNull().default("invited"), // invited|active|suspended|deleted
@@ -34,10 +34,10 @@ export const users = sqliteTable(
   (t) => [uniqueIndex("idx_users_email").on(t.email)]
 );
 
-export const roles = sqliteTable(
+export const roles = pgTable(
   "roles",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     key: text("key").notNull(),
     label: text("label").notNull(),
     description: text("description"),
@@ -46,20 +46,20 @@ export const roles = sqliteTable(
   (t) => [uniqueIndex("idx_roles_key").on(t.key)]
 );
 
-export const permissions = sqliteTable(
+export const permissions = pgTable(
   "permissions",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     key: text("key").notNull(),
     description: text("description"),
   },
   (t) => [uniqueIndex("idx_permissions_key").on(t.key)]
 );
 
-export const userRoles = sqliteTable(
+export const userRoles = pgTable(
   "user_roles",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     userId: integer("user_id").notNull(),
     roleId: integer("role_id").notNull(),
     assignedAt: text("assigned_at").notNull(),
@@ -67,20 +67,25 @@ export const userRoles = sqliteTable(
   (t) => [uniqueIndex("idx_user_roles_pair").on(t.userId, t.roleId)]
 );
 
-export const rolePermissions = sqliteTable(
+export const rolePermissions = pgTable(
   "role_permissions",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     roleId: integer("role_id").notNull(),
     permissionId: integer("permission_id").notNull(),
   },
   (t) => [uniqueIndex("idx_role_permissions_pair").on(t.roleId, t.permissionId)]
 );
 
-export const sessions = sqliteTable(
+/**
+ * @deprecated Superseded by `authSessions` (Auth.js v5 database sessions, see below). Kept in
+ * the schema rather than dropped so no forward migration needs to reconcile historical rows;
+ * nothing in the application writes to this table anymore.
+ */
+export const sessions = pgTable(
   "sessions",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     userId: integer("user_id").notNull(),
     tokenHash: text("token_hash").notNull(),
     csrfSecret: text("csrf_secret").notNull(),
@@ -93,10 +98,15 @@ export const sessions = sqliteTable(
   (t) => [uniqueIndex("idx_sessions_token_hash").on(t.tokenHash), index("idx_sessions_user").on(t.userId)]
 );
 
-export const magicLinkTokens = sqliteTable(
+/**
+ * @deprecated Superseded by `authVerificationTokens` (Auth.js v5's own magic-link token
+ * table). Kept in the schema rather than dropped so no forward migration needs to reconcile
+ * historical rows; nothing in the application writes to this table anymore.
+ */
+export const magicLinkTokens = pgTable(
   "magic_link_tokens",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     email: text("email").notNull(),
     tokenHash: text("token_hash").notNull(),
     purpose: text("purpose").notNull().default("login"),
@@ -108,10 +118,71 @@ export const magicLinkTokens = sqliteTable(
   (t) => [uniqueIndex("idx_magic_link_token_hash").on(t.tokenHash), index("idx_magic_link_email_purpose").on(t.email, t.purpose)]
 );
 
-export const auditLogs = sqliteTable(
+// ---------------------------------------------------------------------------
+// 1b. Auth.js v5 (@auth/drizzle-adapter) tables — identity/session source of
+// truth for staff sign-in. Kept as separate tables from the domain `users`
+// table above (rather than replacing it) because dozens of tables elsewhere
+// in this schema hold integer FK references to `users.id`
+// (content_entries.authorId, audit_logs.actorUserId, case_assignments.userId,
+// etc.); Auth.js's adapter expects a string/UUID user id. The link between
+// the two systems is by email: `with-auth.ts` resolves the authenticated
+// Auth.js identity's email to the matching domain `users` row to load
+// RBAC roles/permissions. Column names here intentionally match
+// @auth/drizzle-adapter's expected property names exactly (including the
+// snake_case OAuth token fields on `authAccounts`) — the adapter's generated
+// queries reference these JS property names directly.
+// ---------------------------------------------------------------------------
+
+export const authUsers = pgTable(
+  "auth_users",
+  {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    email: text("email").notNull(),
+    emailVerified: timestamp("email_verified", { mode: "date" }),
+    image: text("image"),
+  },
+  (t) => [uniqueIndex("idx_auth_users_email").on(t.email)]
+);
+
+export const authAccounts = pgTable(
+  "auth_accounts",
+  {
+    userId: text("user_id").notNull(),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (t) => [primaryKey({ columns: [t.provider, t.providerAccountId] })]
+);
+
+export const authSessions = pgTable("auth_sessions", {
+  sessionToken: text("session_token").primaryKey(),
+  userId: text("user_id").notNull(),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+});
+
+export const authVerificationTokens = pgTable(
+  "auth_verification_tokens",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { mode: "date" }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.identifier, t.token] })]
+);
+
+export const auditLogs = pgTable(
   "audit_logs",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     actorUserId: integer("actor_user_id"),
     action: text("action").notNull(),
     entityType: text("entity_type").notNull(),
@@ -125,10 +196,10 @@ export const auditLogs = sqliteTable(
   (t) => [index("idx_audit_entity").on(t.entityType, t.entityId), index("idx_audit_actor_created").on(t.actorUserId, t.createdAt)]
 );
 
-export const settings = sqliteTable(
+export const settings = pgTable(
   "settings",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     key: text("key").notNull(),
     valueJson: text("value_json").notNull(),
     updatedBy: integer("updated_by"),
@@ -141,10 +212,10 @@ export const settings = sqliteTable(
 // 2. Publishing model
 // ---------------------------------------------------------------------------
 
-export const contentEntries = sqliteTable(
+export const contentEntries = pgTable(
   "content_entries",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     contentType: text("content_type").notNull(),
     canonicalSlug: text("canonical_slug").notNull(),
     locale: text("locale").notNull().default("ar"),
@@ -170,10 +241,10 @@ export const contentEntries = sqliteTable(
   ]
 );
 
-export const contentRevisions = sqliteTable(
+export const contentRevisions = pgTable(
   "content_revisions",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     entryId: integer("entry_id").notNull(),
     revisionNumber: integer("revision_number").notNull(),
     snapshotJson: text("snapshot_json").notNull(),
@@ -185,10 +256,10 @@ export const contentRevisions = sqliteTable(
   (t) => [index("idx_content_revisions_entry").on(t.entryId, t.revisionNumber)]
 );
 
-export const contentTranslations = sqliteTable(
+export const contentTranslations = pgTable(
   "content_translations",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     sourceEntryId: integer("source_entry_id").notNull(),
     targetLocale: text("target_locale").notNull(),
     targetEntryId: integer("target_entry_id"),
@@ -200,10 +271,10 @@ export const contentTranslations = sqliteTable(
   (t) => [uniqueIndex("idx_content_translations_source_locale").on(t.sourceEntryId, t.targetLocale)]
 );
 
-export const taxonomyTerms = sqliteTable(
+export const taxonomyTerms = pgTable(
   "taxonomy_terms",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     kind: text("kind").notNull(), // category|tag
     locale: text("locale").notNull().default("ar"),
     label: text("label").notNull(),
@@ -213,20 +284,20 @@ export const taxonomyTerms = sqliteTable(
   (t) => [uniqueIndex("idx_taxonomy_terms_kind_slug_locale").on(t.kind, t.slug, t.locale)]
 );
 
-export const contentTaxonomyTerms = sqliteTable(
+export const contentTaxonomyTerms = pgTable(
   "content_taxonomy_terms",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     entryId: integer("entry_id").notNull(),
     termId: integer("term_id").notNull(),
   },
   (t) => [uniqueIndex("idx_content_taxonomy_terms_pair").on(t.entryId, t.termId)]
 );
 
-export const relatedContent = sqliteTable(
+export const relatedContent = pgTable(
   "related_content",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     sourceEntryId: integer("source_entry_id").notNull(),
     targetEntryId: integer("target_entry_id").notNull(),
     relationshipType: text("relationship_type").notNull().default("related"),
@@ -235,10 +306,10 @@ export const relatedContent = sqliteTable(
   (t) => [uniqueIndex("idx_related_content_triplet").on(t.sourceEntryId, t.targetEntryId, t.relationshipType)]
 );
 
-export const slugRedirects = sqliteTable(
+export const slugRedirects = pgTable(
   "slug_redirects",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     locale: text("locale").notNull(),
     oldPath: text("old_path").notNull(),
     newPath: text("new_path").notNull(),
@@ -248,10 +319,10 @@ export const slugRedirects = sqliteTable(
   (t) => [uniqueIndex("idx_slug_redirects_locale_old_path").on(t.locale, t.oldPath)]
 );
 
-export const navigationItems = sqliteTable(
+export const navigationItems = pgTable(
   "navigation_items",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     label: text("label").notNull(),
     locale: text("locale").notNull().default("ar"),
     href: text("href").notNull(),
@@ -270,10 +341,10 @@ export const navigationItems = sqliteTable(
 // 3. Typed operational content
 // ---------------------------------------------------------------------------
 
-export const events = sqliteTable(
+export const events = pgTable(
   "events",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     contentEntryId: integer("content_entry_id").notNull(),
     startsAt: text("starts_at").notNull(),
     endsAt: text("ends_at"),
@@ -295,10 +366,10 @@ export const events = sqliteTable(
   (t) => [uniqueIndex("idx_events_content_entry").on(t.contentEntryId), index("idx_events_starts_status").on(t.startsAt, t.eventStatus)]
 );
 
-export const eventRegistrations = sqliteTable(
+export const eventRegistrations = pgTable(
   "event_registrations",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     eventId: integer("event_id").notNull(),
     contactId: integer("contact_id").notNull(),
     status: text("status").notNull().default("pending"), // pending|confirmed|waitlisted|cancelled|attended
@@ -316,10 +387,10 @@ export const eventRegistrations = sqliteTable(
   ]
 );
 
-export const programDetails = sqliteTable(
+export const programDetails = pgTable(
   "program_details",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     contentEntryId: integer("content_entry_id").notNull(),
     audience: text("audience"),
     eligibility: text("eligibility"),
@@ -335,10 +406,10 @@ export const programDetails = sqliteTable(
   (t) => [uniqueIndex("idx_program_details_content_entry").on(t.contentEntryId)]
 );
 
-export const programApplications = sqliteTable(
+export const programApplications = pgTable(
   "program_applications",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     programId: integer("program_id").notNull(),
     contactId: integer("contact_id").notNull(),
     answersJson: text("answers_json").notNull().default("{}"),
@@ -352,10 +423,10 @@ export const programApplications = sqliteTable(
   (t) => [index("idx_program_applications_program_status").on(t.programId, t.status), uniqueIndex("idx_program_applications_reference").on(t.reference)]
 );
 
-export const opportunityDetails = sqliteTable(
+export const opportunityDetails = pgTable(
   "opportunity_details",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     contentEntryId: integer("content_entry_id").notNull(),
     provider: text("provider"),
     deadline: text("deadline"),
@@ -368,10 +439,10 @@ export const opportunityDetails = sqliteTable(
   (t) => [uniqueIndex("idx_opportunity_details_content_entry").on(t.contentEntryId)]
 );
 
-export const partners = sqliteTable(
+export const partners = pgTable(
   "partners",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     nameAr: text("name_ar").notNull(),
     nameEn: text("name_en"),
     descriptionAr: text("description_ar"),
@@ -387,10 +458,10 @@ export const partners = sqliteTable(
   }
 );
 
-export const partnershipRequests = sqliteTable(
+export const partnershipRequests = pgTable(
   "partnership_requests",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     contactId: integer("contact_id").notNull(),
     organizationName: text("organization_name").notNull(),
     proposal: text("proposal").notNull(),
@@ -404,10 +475,10 @@ export const partnershipRequests = sqliteTable(
   (t) => [uniqueIndex("idx_partnership_requests_reference").on(t.reference)]
 );
 
-export const teamMembers = sqliteTable(
+export const teamMembers = pgTable(
   "team_members",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     contentEntryId: integer("content_entry_id"),
     nameAr: text("name_ar").notNull(),
     nameEn: text("name_en"),
@@ -423,10 +494,10 @@ export const teamMembers = sqliteTable(
   }
 );
 
-export const governorateProfiles = sqliteTable(
+export const governorateProfiles = pgTable(
   "governorate_profiles",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     governorate: text("governorate").notNull(),
     overviewAr: text("overview_ar"),
     overviewEn: text("overview_en"),
@@ -440,10 +511,10 @@ export const governorateProfiles = sqliteTable(
   (t) => [uniqueIndex("idx_governorate_profiles_name").on(t.governorate)]
 );
 
-export const organizationStructureNodes = sqliteTable(
+export const organizationStructureNodes = pgTable(
   "organization_structure_nodes",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     titleAr: text("title_ar").notNull(),
     titleEn: text("title_en"),
     parentId: integer("parent_id"),
@@ -459,10 +530,10 @@ export const organizationStructureNodes = sqliteTable(
 // 4. Observatory & policy
 // ---------------------------------------------------------------------------
 
-export const problems = sqliteTable(
+export const problems = pgTable(
   "problems",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     contentEntryId: integer("content_entry_id"),
     sector: text("sector"),
     governorate: text("governorate"),
@@ -478,10 +549,10 @@ export const problems = sqliteTable(
   (t) => [index("idx_problems_status_visibility").on(t.problemStatus, t.visibility)]
 );
 
-export const problemEvidence = sqliteTable(
+export const problemEvidence = pgTable(
   "problem_evidence",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     problemId: integer("problem_id").notNull(),
     sourceType: text("source_type").notNull().default("report"), // report|news|submission|survey|other
     citation: text("citation"),
@@ -495,10 +566,10 @@ export const problemEvidence = sqliteTable(
   (t) => [index("idx_problem_evidence_problem").on(t.problemId)]
 );
 
-export const proposedSolutions = sqliteTable(
+export const proposedSolutions = pgTable(
   "proposed_solutions",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     problemId: integer("problem_id").notNull(),
     contentEntryId: integer("content_entry_id"),
     solutionType: text("solution_type"),
@@ -512,10 +583,10 @@ export const proposedSolutions = sqliteTable(
   (t) => [index("idx_proposed_solutions_problem").on(t.problemId)]
 );
 
-export const solutionPartners = sqliteTable(
+export const solutionPartners = pgTable(
   "solution_partners",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     solutionId: integer("solution_id").notNull(),
     partnerId: integer("partner_id"),
     candidateName: text("candidate_name"),
@@ -525,10 +596,10 @@ export const solutionPartners = sqliteTable(
   (t) => [index("idx_solution_partners_solution").on(t.solutionId)]
 );
 
-export const policyPapers = sqliteTable(
+export const policyPapers = pgTable(
   "policy_papers",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     contentEntryId: integer("content_entry_id").notNull(),
     policyStatus: text("policy_status").notNull().default("draft"), // draft|consultation|final|published
     consultationDeadline: text("consultation_deadline"),
@@ -541,10 +612,10 @@ export const policyPapers = sqliteTable(
   (t) => [uniqueIndex("idx_policy_papers_content_entry").on(t.contentEntryId)]
 );
 
-export const problemUpdates = sqliteTable(
+export const problemUpdates = pgTable(
   "problem_updates",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     problemId: integer("problem_id").notNull(),
     statusChange: text("status_change"),
     publicUpdateText: text("public_update_text"),
@@ -560,10 +631,10 @@ export const problemUpdates = sqliteTable(
 // 5. Participation, communication, CRM workflow
 // ---------------------------------------------------------------------------
 
-export const contacts = sqliteTable(
+export const contacts = pgTable(
   "contacts",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     name: text("name").notNull(),
     email: text("email"),
     phone: text("phone"),
@@ -579,10 +650,10 @@ export const contacts = sqliteTable(
   (t) => [index("idx_contacts_email").on(t.email)]
 );
 
-export const intakeCases = sqliteTable(
+export const intakeCases = pgTable(
   "intake_cases",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     kind: text("kind").notNull(), // join|volunteer|idea|problem|proposal|contact|partnership
     contactId: integer("contact_id").notNull(),
     status: text("status").notNull().default("new"), // new|triaged|assigned|in_review|action_taken|closed|archived
@@ -598,10 +669,10 @@ export const intakeCases = sqliteTable(
   (t) => [index("idx_intake_cases_kind_status_created").on(t.kind, t.status, t.createdAt), uniqueIndex("idx_intake_cases_reference").on(t.reference)]
 );
 
-export const intakeCaseDetails = sqliteTable(
+export const intakeCaseDetails = pgTable(
   "intake_case_details",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     caseId: integer("case_id").notNull(),
     answersJson: text("answers_json").notNull().default("{}"),
     narrativeBody: text("narrative_body").notNull(),
@@ -610,10 +681,10 @@ export const intakeCaseDetails = sqliteTable(
   (t) => [uniqueIndex("idx_intake_case_details_case").on(t.caseId)]
 );
 
-export const caseStatusHistory = sqliteTable(
+export const caseStatusHistory = pgTable(
   "case_status_history",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     caseId: integer("case_id").notNull(),
     status: text("status").notNull(),
     note: text("note"),
@@ -624,10 +695,10 @@ export const caseStatusHistory = sqliteTable(
   (t) => [index("idx_case_status_history_case").on(t.caseId, t.createdAt)]
 );
 
-export const caseAssignments = sqliteTable(
+export const caseAssignments = pgTable(
   "case_assignments",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     caseId: integer("case_id").notNull(),
     userId: integer("user_id").notNull(),
     assignedBy: integer("assigned_by"),
@@ -636,10 +707,10 @@ export const caseAssignments = sqliteTable(
   (t) => [index("idx_case_assignments_case").on(t.caseId)]
 );
 
-export const caseComments = sqliteTable(
+export const caseComments = pgTable(
   "case_comments",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     caseId: integer("case_id").notNull(),
     authorUserId: integer("author_user_id"),
     body: text("body").notNull(),
@@ -649,10 +720,10 @@ export const caseComments = sqliteTable(
   (t) => [index("idx_case_comments_case").on(t.caseId, t.createdAt)]
 );
 
-export const consentRecords = sqliteTable(
+export const consentRecords = pgTable(
   "consent_records",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     contactId: integer("contact_id"),
     consentType: text("consent_type").notNull(),
     consentVersion: text("consent_version").notNull(),
@@ -667,10 +738,10 @@ export const consentRecords = sqliteTable(
 // 6. Media, documents, notifications, search, assistant, analytics
 // ---------------------------------------------------------------------------
 
-export const storageAssets = sqliteTable(
+export const storageAssets = pgTable(
   "storage_assets",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     objectKey: text("object_key").notNull(),
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
@@ -688,10 +759,10 @@ export const storageAssets = sqliteTable(
   (t) => [uniqueIndex("idx_storage_assets_object_key").on(t.objectKey)]
 );
 
-export const documentAssets = sqliteTable(
+export const documentAssets = pgTable(
   "document_assets",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     storageAssetId: integer("storage_asset_id").notNull(),
     title: text("title").notNull(),
     fileCategory: text("file_category").notNull().default("report"), // report|policy|guide|form|other
@@ -704,10 +775,10 @@ export const documentAssets = sqliteTable(
   (t) => [index("idx_document_assets_storage").on(t.storageAssetId)]
 );
 
-export const contentMedia = sqliteTable(
+export const contentMedia = pgTable(
   "content_media",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     entryId: integer("entry_id").notNull(),
     assetId: integer("asset_id").notNull(),
     placement: text("placement").notNull().default("body"), // cover|gallery|body|attachment
@@ -717,10 +788,10 @@ export const contentMedia = sqliteTable(
   (t) => [uniqueIndex("idx_content_media_triplet").on(t.entryId, t.assetId, t.placement)]
 );
 
-export const notificationTemplates = sqliteTable(
+export const notificationTemplates = pgTable(
   "notification_templates",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     code: text("code").notNull(),
     locale: text("locale").notNull().default("ar"),
     subject: text("subject").notNull(),
@@ -732,10 +803,10 @@ export const notificationTemplates = sqliteTable(
   (t) => [uniqueIndex("idx_notification_templates_code_locale").on(t.code, t.locale)]
 );
 
-export const notifications = sqliteTable(
+export const notifications = pgTable(
   "notifications",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     recipientContactId: integer("recipient_contact_id"),
     recipientUserId: integer("recipient_user_id"),
     templateCode: text("template_code").notNull(),
@@ -751,10 +822,10 @@ export const notifications = sqliteTable(
   (t) => [index("idx_notifications_status_created").on(t.status, t.createdAt)]
 );
 
-export const searchIndexQueue = sqliteTable(
+export const searchIndexQueue = pgTable(
   "search_index_queue",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     entityType: text("entity_type").notNull(),
     entityId: integer("entity_id").notNull(),
     locale: text("locale").notNull().default("ar"),
@@ -768,10 +839,10 @@ export const searchIndexQueue = sqliteTable(
   (t) => [index("idx_search_index_queue_status_created").on(t.status, t.createdAt)]
 );
 
-export const assistantKnowledgeSources = sqliteTable(
+export const assistantKnowledgeSources = pgTable(
   "assistant_knowledge_sources",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     sourceType: text("source_type").notNull().default("content"), // content|document|faq
     entryId: integer("entry_id"),
     documentAssetId: integer("document_asset_id"),
@@ -785,10 +856,10 @@ export const assistantKnowledgeSources = sqliteTable(
   (t) => [index("idx_assistant_knowledge_sources_approved").on(t.approved, t.ingestionStatus)]
 );
 
-export const assistantKnowledgeChunks = sqliteTable(
+export const assistantKnowledgeChunks = pgTable(
   "assistant_knowledge_chunks",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     sourceId: integer("source_id").notNull(),
     chunkText: text("chunk_text").notNull(),
     chunkHash: text("chunk_hash").notNull(),
@@ -797,10 +868,10 @@ export const assistantKnowledgeChunks = sqliteTable(
   (t) => [index("idx_assistant_knowledge_chunks_source").on(t.sourceId), index("idx_assistant_knowledge_chunks_hash").on(t.chunkHash)]
 );
 
-export const assistantConversations = sqliteTable(
+export const assistantConversations = pgTable(
   "assistant_conversations",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     sessionRef: text("session_ref").notNull(),
     userId: integer("user_id"),
     locale: text("locale").notNull().default("ar"),
@@ -812,10 +883,10 @@ export const assistantConversations = sqliteTable(
   (t) => [index("idx_assistant_conversations_session").on(t.sessionRef)]
 );
 
-export const assistantMessages = sqliteTable(
+export const assistantMessages = pgTable(
   "assistant_messages",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     conversationId: integer("conversation_id").notNull(),
     role: text("role").notNull(), // user|assistant
     content: text("content").notNull(),
@@ -826,10 +897,10 @@ export const assistantMessages = sqliteTable(
   (t) => [index("idx_assistant_messages_conversation").on(t.conversationId, t.createdAt)]
 );
 
-export const analyticsEvents = sqliteTable(
+export const analyticsEvents = pgTable(
   "analytics_events",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     eventName: text("event_name").notNull(),
     contentEntryId: integer("content_entry_id"),
     pagePath: text("page_path"),
@@ -845,10 +916,16 @@ export const analyticsEvents = sqliteTable(
 //    for Cloudflare Queues until that binding is provisioned for this project)
 // ---------------------------------------------------------------------------
 
-export const rateLimitEvents = sqliteTable(
+/**
+ * @deprecated Rate limiting now goes through Redis (`server/services/rate-limit-service.ts`,
+ * `ioredis` INCR/EXPIRE) instead of a Postgres table. Kept in the schema rather than dropped
+ * so no forward migration needs to reconcile historical rows; nothing in the application
+ * writes to this table anymore.
+ */
+export const rateLimitEvents = pgTable(
   "rate_limit_events",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     bucketKey: text("bucket_key").notNull(),
     windowStart: text("window_start").notNull(),
     count: integer("count").notNull().default(1),
@@ -857,10 +934,10 @@ export const rateLimitEvents = sqliteTable(
   (t) => [uniqueIndex("idx_rate_limit_events_bucket_window").on(t.bucketKey, t.windowStart)]
 );
 
-export const idempotencyKeys = sqliteTable(
+export const idempotencyKeys = pgTable(
   "idempotency_keys",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     scope: text("scope").notNull(),
     key: text("key").notNull(),
     responseJson: text("response_json"),
@@ -869,10 +946,16 @@ export const idempotencyKeys = sqliteTable(
   (t) => [uniqueIndex("idx_idempotency_keys_scope_key").on(t.scope, t.key)]
 );
 
-export const outboxJobs = sqliteTable(
+/**
+ * @deprecated Background jobs now go through BullMQ + Redis (`server/jobs/queue.ts`,
+ * `server/jobs/worker.ts`) instead of a Postgres-table outbox. Kept in the schema rather than
+ * dropped so no forward migration needs to reconcile historical rows; nothing in the
+ * application writes to this table anymore.
+ */
+export const outboxJobs = pgTable(
   "outbox_jobs",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     jobType: text("job_type").notNull(), // notification|search_index|knowledge_ingest
     payloadJson: text("payload_json").notNull().default("{}"),
     status: text("status").notNull().default("pending"), // pending|processing|done|failed
@@ -897,10 +980,10 @@ export const outboxJobs = sqliteTable(
 // 8. Membership: branches, fees, applications, cards
 // ---------------------------------------------------------------------------
 
-export const partyBranches = sqliteTable(
+export const partyBranches = pgTable(
   "party_branches",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     governorate: text("governorate").notNull(),
     slug: text("slug").notNull(),
     nameAr: text("name_ar").notNull(),
@@ -919,10 +1002,10 @@ export const partyBranches = sqliteTable(
   (t) => [uniqueIndex("idx_party_branches_slug").on(t.slug)]
 );
 
-export const membershipFeeRules = sqliteTable(
+export const membershipFeeRules = pgTable(
   "membership_fee_rules",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     amount: integer("amount").notNull(),
     currency: text("currency").notNull().default("EGP"),
     effectiveFrom: text("effective_from").notNull(),
@@ -935,10 +1018,10 @@ export const membershipFeeRules = sqliteTable(
   (t) => [index("idx_membership_fee_rules_active_from").on(t.active, t.effectiveFrom)]
 );
 
-export const membershipApplications = sqliteTable(
+export const membershipApplications = pgTable(
   "membership_applications",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     publicReference: text("public_reference").notNull(),
     contactId: integer("contact_id").notNull(),
     applicationStatus: text("application_status").notNull().default("draft"),
@@ -967,10 +1050,10 @@ export const membershipApplications = sqliteTable(
   ]
 );
 
-export const membershipApplicationProfile = sqliteTable(
+export const membershipApplicationProfile = pgTable(
   "membership_application_profile",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     applicationId: integer("application_id").notNull(),
     legalName: text("legal_name"),
     dateOfBirth: text("date_of_birth"),
@@ -986,10 +1069,10 @@ export const membershipApplicationProfile = sqliteTable(
   (t) => [uniqueIndex("idx_membership_application_profile_application").on(t.applicationId)]
 );
 
-export const membershipApplicationFiles = sqliteTable(
+export const membershipApplicationFiles = pgTable(
   "membership_application_files",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     applicationId: integer("application_id").notNull(),
     storageAssetId: integer("storage_asset_id").notNull(),
     fileType: text("file_type").notNull(), // profile_photo|identity_document|supporting_document
@@ -999,10 +1082,10 @@ export const membershipApplicationFiles = sqliteTable(
   (t) => [index("idx_membership_application_files_application").on(t.applicationId)]
 );
 
-export const membershipStatusHistory = sqliteTable(
+export const membershipStatusHistory = pgTable(
   "membership_status_history",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     applicationId: integer("application_id").notNull(),
     status: text("status").notNull(),
     publicMessage: text("public_message"),
@@ -1013,10 +1096,10 @@ export const membershipStatusHistory = sqliteTable(
   (t) => [index("idx_membership_status_history_application").on(t.applicationId, t.createdAt)]
 );
 
-export const membershipActionRequests = sqliteTable(
+export const membershipActionRequests = pgTable(
   "membership_action_requests",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     applicationId: integer("application_id").notNull(),
     requestedFieldsJson: text("requested_fields_json").notNull().default("[]"),
     publicInstructions: text("public_instructions").notNull(),
@@ -1027,10 +1110,10 @@ export const membershipActionRequests = sqliteTable(
   (t) => [index("idx_membership_action_requests_application").on(t.applicationId)]
 );
 
-export const membershipCompletionAppointments = sqliteTable(
+export const membershipCompletionAppointments = pgTable(
   "membership_completion_appointments",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     applicationId: integer("application_id").notNull(),
     branchId: integer("branch_id").notNull(),
     scheduledAt: text("scheduled_at"),
@@ -1043,10 +1126,10 @@ export const membershipCompletionAppointments = sqliteTable(
   (t) => [index("idx_membership_completion_appointments_application").on(t.applicationId)]
 );
 
-export const memberships = sqliteTable(
+export const memberships = pgTable(
   "memberships",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     applicationId: integer("application_id").notNull(),
     membershipNumber: text("membership_number").notNull(),
     status: text("status").notNull().default("active"), // active|suspended|expired|revoked
@@ -1061,10 +1144,10 @@ export const memberships = sqliteTable(
   ]
 );
 
-export const membershipCardTemplates = sqliteTable(
+export const membershipCardTemplates = pgTable(
   "membership_card_templates",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     name: text("name").notNull(),
     version: integer("version").notNull(),
     layoutConfigJson: text("layout_config_json").notNull().default("{}"),
@@ -1076,10 +1159,10 @@ export const membershipCardTemplates = sqliteTable(
   (t) => [uniqueIndex("idx_membership_card_templates_name_version").on(t.name, t.version)]
 );
 
-export const membershipCards = sqliteTable(
+export const membershipCards = pgTable(
   "membership_cards",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     membershipId: integer("membership_id").notNull(),
     templateVersion: integer("template_version").notNull(),
     renderAssetId: integer("render_asset_id"),
@@ -1094,10 +1177,10 @@ export const membershipCards = sqliteTable(
   ]
 );
 
-export const membershipShareEvents = sqliteTable(
+export const membershipShareEvents = pgTable(
   "membership_share_events",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     membershipCardId: integer("membership_card_id").notNull(),
     channel: text("channel").notNull().default("link"), // link|whatsapp|other
     anonymizedAttribution: text("anonymized_attribution"),
@@ -1110,10 +1193,10 @@ export const membershipShareEvents = sqliteTable(
 // 9. Issue Intelligence / monitoring engine + discussion topics
 // ---------------------------------------------------------------------------
 
-export const monitoringSources = sqliteTable(
+export const monitoringSources = pgTable(
   "monitoring_sources",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     name: text("name").notNull(),
     sourceType: text("source_type").notNull().default("manual"), // rss|official_website|approved_api|manual
     configSecretRef: text("config_secret_ref"),
@@ -1126,10 +1209,10 @@ export const monitoringSources = sqliteTable(
   }
 );
 
-export const monitoringIngestions = sqliteTable(
+export const monitoringIngestions = pgTable(
   "monitoring_ingestions",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     sourceId: integer("source_id").notNull(),
     externalUrl: text("external_url"),
     externalId: text("external_id"),
@@ -1143,10 +1226,10 @@ export const monitoringIngestions = sqliteTable(
   (t) => [index("idx_monitoring_ingestions_source_status").on(t.sourceId, t.ingestionStatus)]
 );
 
-export const monitoringItems = sqliteTable(
+export const monitoringItems = pgTable(
   "monitoring_items",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     ingestionId: integer("ingestion_id").notNull(),
     itemType: text("item_type").notNull().default("news"), // news|report|issue|data_point
     relevanceScore: integer("relevance_score").notNull().default(0),
@@ -1161,10 +1244,10 @@ export const monitoringItems = sqliteTable(
   (t) => [index("idx_monitoring_items_visibility_state").on(t.visibility, t.verificationState)]
 );
 
-export const monitoringItemLinks = sqliteTable(
+export const monitoringItemLinks = pgTable(
   "monitoring_item_links",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     monitoringItemId: integer("monitoring_item_id").notNull(),
     linkedType: text("linked_type").notNull(), // problem|solution|policy|report|event|program|discussion_topic
     linkedId: integer("linked_id").notNull(),
@@ -1173,10 +1256,10 @@ export const monitoringItemLinks = sqliteTable(
   (t) => [index("idx_monitoring_item_links_item").on(t.monitoringItemId)]
 );
 
-export const discussionTopics = sqliteTable(
+export const discussionTopics = pgTable(
   "discussion_topics",
   {
-    id: integer("id").primaryKey({ autoIncrement: true }),
+    id: serial("id").primaryKey(),
     title: text("title").notNull(),
     linkedMonitoringItemId: integer("linked_monitoring_item_id"),
     publicStatus: text("public_status").notNull().default("draft"), // draft|open|closed|archived

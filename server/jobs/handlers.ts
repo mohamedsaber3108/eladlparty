@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { getDb, nowIso } from "@/server/repositories/db";
 import * as schema from "@/db/schema";
 import { getEmailAdapter } from "@/server/notifications/email-adapter";
-import type { OutboxHandlers } from "@/server/jobs/outbox";
+import type { JobHandlers } from "@/server/jobs/queue";
 
 /**
  * Search indexing currently has no dedicated index store (no Vectorize/external search
@@ -51,7 +51,7 @@ async function handleKnowledgeIngest(payload: Record<string, unknown>): Promise<
     .where(eq(schema.assistantKnowledgeSources.id, sourceId));
 }
 
-export const outboxHandlers: OutboxHandlers = {
+export const jobHandlers: JobHandlers = {
   notification: handleNotification,
   search_index: handleSearchIndex,
   knowledge_ingest: handleKnowledgeIngest,

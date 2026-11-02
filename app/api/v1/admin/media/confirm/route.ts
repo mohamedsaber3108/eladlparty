@@ -3,9 +3,9 @@ import { jsonOk, toErrorResponse } from "@/server/http/errors";
 import { requireStaff } from "@/server/http/with-auth";
 import { parseJsonBody } from "@/server/http/validate";
 import { uploadConfirmRequestSchema } from "@/shared/contracts/media";
-import { confirmUpload } from "@/server/storage/r2-storage";
+import { confirmUpload } from "@/server/storage/s3-storage";
 
-/** POST /api/v1/admin/media/confirm — verifies the object landed in R2 and marks the asset ready. */
+/** POST /api/v1/admin/media/confirm — verifies the object landed in S3 and marks the asset ready. */
 export async function POST(request: Request): Promise<Response> {
   const requestId = requestIdFrom(request);
   try {

@@ -4,7 +4,7 @@ import * as schema from "@/db/schema";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/http/errors";
 import type { AdminContentCreateInput, AdminContentPublishAction, AdminContentUpdateInput } from "@/shared/contracts/admin";
 import type { ContentCard, ContentDetail, ContentListQuery } from "@/shared/contracts/content";
-import { enqueueOutboxJob } from "@/server/jobs/outbox";
+import { enqueueJob } from "@/server/jobs/queue";
 import { recordAuditLog } from "@/server/services/audit-service";
 
 type ContentEntryRow = typeof schema.contentEntries.$inferSelect;
@@ -250,7 +250,7 @@ export async function createContentEntry(input: AdminContentCreateInput, authorI
     authorId,
     createdAt: now,
   });
-  if (status === "published") await enqueueOutboxJob("search_index", { entityType: "content_entries", entityId: id });
+  if (status === "published") await enqueueJob("search_index", { entityType: "content_entries", entityId: id });
   await recordAuditLog({ actorUserId: authorId, action: "content.create", entityType: "content_entries", entityId: id, after: input, requestId: null });
   return id;
 }
@@ -295,7 +295,7 @@ export async function updateContentEntry(input: AdminContentUpdateInput, actorId
     createdAt: now,
   });
 
-  if (existing.status === "published") await enqueueOutboxJob("search_index", { entityType: "content_entries", entityId: input.id });
+  if (existing.status === "published") await enqueueJob("search_index", { entityType: "content_entries", entityId: input.id });
   await recordAuditLog({ actorUserId: actorId, action: "content.update", entityType: "content_entries", entityId: input.id, before: existing, after: input, requestId: null });
 }
 
@@ -347,7 +347,7 @@ export async function transitionContentEntry(input: AdminContentPublishAction, a
   await db.update(schema.contentEntries).set(patch).where(eq(schema.contentEntries.id, input.id));
 
   if (input.action === "publish" || input.action === "unpublish" || input.action === "archive") {
-    await enqueueOutboxJob("search_index", { entityType: "content_entries", entityId: input.id, operation: input.action === "publish" ? "upsert" : "delete" });
+    await enqueueJob("search_index", { entityType: "content_entries", entityId: input.id, operation: input.action === "publish" ? "upsert" : "delete" });
   }
 
   await recordAuditLog({
@@ -369,7 +369,7 @@ export async function deleteContentEntry(id: number, actorId: number | null): Pr
 
   if (entry.status === "published") {
     await db.update(schema.contentEntries).set({ status: "archived", updatedAt: nowIso() }).where(eq(schema.contentEntries.id, id));
-    await enqueueOutboxJob("search_index", { entityType: "content_entries", entityId: id, operation: "delete" });
+    await enqueueJob("search_index", { entityType: "content_entries", entityId: id, operation: "delete" });
   } else {
     await db.delete(schema.contentEntries).where(eq(schema.contentEntries.id, id));
   }
@@ -419,7 +419,7 @@ export async function runScheduledPublishSweep(): Promise<number> {
     .where(and(eq(schema.contentEntries.status, "scheduled"), lte(schema.contentEntries.scheduledAt, now)));
   for (const entry of due) {
     await db.update(schema.contentEntries).set({ status: "published", publishedAt: now, updatedAt: now }).where(eq(schema.contentEntries.id, entry.id));
-    await enqueueOutboxJob("search_index", { entityType: "content_entries", entityId: entry.id });
+    await enqueueJob("search_index", { entityType: "content_entries", entityId: entry.id });
   }
   return due.length;
 }

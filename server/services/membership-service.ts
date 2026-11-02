@@ -1,10 +1,10 @@
-import { env } from "cloudflare:workers";
 import { and, desc, eq } from "drizzle-orm";
+import { clientIp } from "@/server/http/client-ip";
 import { getDb, generateReference, nowIso } from "@/server/repositories/db";
 import * as schema from "@/db/schema";
 import { ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError } from "@/server/http/errors";
 import { hmacSha256Hex, randomToken, sha256Hex } from "@/server/security/crypto";
-import { enqueueOutboxJob } from "@/server/jobs/outbox";
+import { enqueueJob } from "@/server/jobs/queue";
 import { recordAuditLog } from "@/server/services/audit-service";
 import { getBranchById } from "@/server/services/branch-service";
 import { getCurrentFeeRule } from "@/server/services/fee-service";
@@ -21,7 +21,7 @@ const ACCESS_COOKIE = "eladl_applicant_access";
 const ACCESS_TTL_SECONDS = 30 * 60;
 
 function applicantAccessSecret(): string {
-  const secret = env.SESSION_SECRET;
+  const secret = process.env.SESSION_SECRET;
   if (!secret) throw new Error("SESSION_SECRET is not configured. Required for applicant verification access.");
   return secret;
 }
@@ -118,13 +118,13 @@ export async function createMembershipApplication(input: MembershipApplicationCr
     createdAt: now,
   });
 
-  await enqueueOutboxJob("notification", {
+  await enqueueJob("notification", {
     to: input.email,
     subject: "تم استلام طلب العضوية — حزب العدل",
     text: `الرقم المرجعي: ${reference}. سيصلك تحديث عند مراجعة طلبك. يمكنك متابعة الحالة من صفحة متابعة الطلب.`,
   });
 
-  const ip = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for");
+  const ip = clientIp(request);
   await recordAuditLog({ actorUserId: null, action: "membership.apply", entityType: "membership_applications", entityId: applicationId, requestId: null, ip });
   return { reference };
 }
@@ -154,9 +154,9 @@ export async function requestApplicationAccess(reference: string, email: string)
     .set({ verificationTokenHash: tokenHash, verificationExpiresAt: expiresAt })
     .where(eq(schema.membershipApplications.id, row.application.id));
 
-  const baseUrl = env.PUBLIC_BASE_URL ?? "http://localhost:5173";
+  const baseUrl = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
   const verifyUrl = `${baseUrl}/membership/status?ref=${reference}&token=${token}`;
-  await enqueueOutboxJob("notification", {
+  await enqueueJob("notification", {
     to: email,
     subject: "رابط متابعة طلب العضوية — حزب العدل",
     text: `استخدم هذا الرابط لمتابعة طلبك خلال 15 دقيقة: ${verifyUrl}`,

@@ -1,54 +1,19 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1790364112966,
-      "tag": "0000_outgoing_wiccan",
+      "version": "7",
+      "when": 1792406501767,
+      "tag": "0000_simple_microbe",
       "breakpoints": true
     },
     {
       "idx": 1,
-      "version": "6",
-      "when": 1790364906788,
-      "tag": "0001_square_marten_broadcloak",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1790433950206,
-      "tag": "0002_wakeful_franklin_storm",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1790445043272,
-      "tag": "0003_careless_jackal",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1791481961612,
-      "tag": "0004_spooky_bedlam",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1791482179224,
-      "tag": "0005_true_katie_power",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1791510419809,
-      "tag": "0006_puzzling_warbound",
+      "version": "7",
+      "when": 1793631590329,
+      "tag": "0001_amused_toro",
       "breakpoints": true
     }
   ]

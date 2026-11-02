@@ -4,9 +4,10 @@ import * as schema from "@/db/schema";
 import { NotFoundError } from "@/server/http/errors";
 import type { CaseListQuery, IntakeKind } from "@/shared/contracts/intake";
 import type { CaseUpdateInput } from "@/shared/contracts/admin";
-import { enqueueOutboxJob } from "@/server/jobs/outbox";
+import { enqueueJob } from "@/server/jobs/queue";
 import { recordAuditLog } from "@/server/services/audit-service";
 import { hashForAudit } from "@/server/security/crypto";
+import { clientIp } from "@/server/http/client-ip";
 
 export interface IntakeContactInput {
   name: string;
@@ -69,7 +70,7 @@ export async function createIntakeCase(params: {
 
   const contactId = await findOrCreateContact(params.contact, consentVersion);
   const reference = generateReference(params.kind.slice(0, 2).toUpperCase());
-  const ip = params.request.headers.get("cf-connecting-ip") ?? params.request.headers.get("x-forwarded-for");
+  const ip = clientIp(params.request);
 
   const inserted = await db
     .insert(schema.intakeCases)
@@ -103,7 +104,7 @@ export async function createIntakeCase(params: {
   });
 
   if (params.contact.email) {
-    await enqueueOutboxJob("notification", {
+    await enqueueJob("notification", {
       to: params.contact.email,
       subject: "تم استلام مشاركتك — أمانة ريادة الأعمال المركزية",
       text: `وصلت مشاركتك بنجاح. الرقم المرجعي: ${reference}. سيراجع فريق الأمانة الطلب ويتواصل معك عند الحاجة.`,

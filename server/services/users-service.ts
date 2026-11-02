@@ -80,7 +80,12 @@ export async function suspendStaffUser(userId: number, actor: SessionUser): Prom
   assertCanManageTarget(actor, roleRows.map((r) => r.roleKey));
 
   await db.update(schema.users).set({ status: "suspended", updatedAt: nowIso() }).where(eq(schema.users.id, userId));
-  await db.update(schema.sessions).set({ revokedAt: nowIso() }).where(eq(schema.sessions.userId, userId));
+
+  // Revoke any active Auth.js sessions for this email so the suspension takes effect
+  // immediately rather than waiting for the session to expire naturally.
+  const [authUser] = await db.select().from(schema.authUsers).where(eq(schema.authUsers.email, target.email.toLowerCase())).limit(1);
+  if (authUser) await db.delete(schema.authSessions).where(eq(schema.authSessions.userId, authUser.id));
+
   await recordAuditLog({ actorUserId: actor.id, action: "users.suspend", entityType: "users", entityId: userId, requestId: null });
 }
 

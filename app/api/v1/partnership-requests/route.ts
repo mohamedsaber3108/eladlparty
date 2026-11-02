@@ -6,7 +6,7 @@ import { guardPublicWrite } from "@/server/http/public-write-guard";
 import { partnershipRequestSchema } from "@/shared/contracts/intake";
 import { getDb, generateReference, nowIso } from "@/server/repositories/db";
 import * as schema from "@/db/schema";
-import { enqueueOutboxJob } from "@/server/jobs/outbox";
+import { enqueueJob } from "@/server/jobs/queue";
 import { recordAuditLog } from "@/server/services/audit-service";
 
 /** POST /api/v1/partnership-requests — public partnership proposal form. */
@@ -43,7 +43,7 @@ export async function POST(request: Request): Promise<Response> {
       updatedAt: now,
     });
 
-    await enqueueOutboxJob("notification", {
+    await enqueueJob("notification", {
       to: input.email,
       subject: "تم استلام طلب الشراكة",
       text: `الرقم المرجعي: ${reference}. سيتواصل فريق الأمانة معك لمناقشة التفاصيل.`,

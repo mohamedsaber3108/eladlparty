@@ -5,8 +5,7 @@ import { adminMembershipDecisionSchema } from "@/shared/contracts/membership";
 import { decideMembershipApplication } from "@/server/services/membership-service";
 import { hasPermission } from "@/server/policies/rbac";
 import { ForbiddenError, UnauthorizedError } from "@/server/http/errors";
-import { getSessionUser } from "@/server/services/auth-service";
-import { assertCsrfValid } from "@/server/services/auth-service";
+import { getStaffSession } from "@/server/http/with-auth";
 import type { AdminMembershipDecisionInput } from "@/shared/contracts/membership";
 
 /** Maps each state-machine action to the permission required to perform it. */
@@ -36,9 +35,8 @@ const actionPermission: Record<AdminMembershipDecisionInput["action"], "membersh
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const requestId = requestIdFrom(request);
   try {
-    const user = await getSessionUser(request);
+    const user = await getStaffSession();
     if (!user) throw new UnauthorizedError();
-    assertCsrfValid(request);
 
     const { id } = await params;
     const input = await parseJsonBody(request, adminMembershipDecisionSchema);

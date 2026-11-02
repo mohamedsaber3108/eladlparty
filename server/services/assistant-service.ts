@@ -5,6 +5,7 @@ import { RateLimitedError } from "@/server/http/errors";
 import type { AssistantMessageRequest, AssistantMessageResponse } from "@/shared/contracts/assistant";
 import { consumeRateLimit } from "@/server/services/rate-limit-service";
 import { randomToken } from "@/server/security/crypto";
+import { clientIp } from "@/server/http/client-ip";
 
 /**
  * Keyword-based retrieval over approved knowledge only. There is no AI_PROVIDER_API_KEY secret
@@ -59,7 +60,7 @@ function guidedFallback(message: string, _locale: "ar" | "en"): { answer: string
 }
 
 export async function answerAssistantMessage(input: AssistantMessageRequest, request: Request): Promise<AssistantMessageResponse> {
-  const bucketKey = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for") ?? "anonymous";
+  const bucketKey = clientIp(request) ?? "anonymous";
   const allowed = await consumeRateLimit(`assistant:${bucketKey}`, 20, 60 * 1000);
   if (!allowed) throw new RateLimitedError("عدد كبير من الأسئلة في وقت قصير، حاول بعد قليل");
 

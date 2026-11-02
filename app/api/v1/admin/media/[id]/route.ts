@@ -1,9 +1,9 @@
 import { requestIdFrom } from "@/server/http/request-id";
 import { jsonOk, toErrorResponse } from "@/server/http/errors";
 import { requireStaff } from "@/server/http/with-auth";
-import { deleteStorageAsset } from "@/server/storage/r2-storage";
+import { deleteStorageAsset } from "@/server/storage/s3-storage";
 
-/** DELETE /api/v1/admin/media/:id — deletes the R2 object and its storage_assets row. */
+/** DELETE /api/v1/admin/media/:id — deletes the S3 object and its storage_assets row. */
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const requestId = requestIdFrom(request);
   try {

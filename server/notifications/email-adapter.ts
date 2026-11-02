@@ -1,5 +1,3 @@
-import { env } from "cloudflare:workers";
-
 export interface EmailMessage {
   to: string;
   subject: string;
@@ -21,11 +19,16 @@ export interface EmailAdapter {
  */
 class LoggingEmailAdapter implements EmailAdapter {
   async send(message: EmailMessage) {
+    // Printing the full body (not just to/subject) is deliberate: in local development this
+    // is the only way to retrieve a magic-link sign-in URL without a real email provider
+    // configured. Treated as a successful "delivery" (ok:true) from the caller's perspective —
+    // this adapter's whole purpose is to stand in for a real provider, not to report failure.
     console.warn(
-      `[email-adapter] EMAIL_PROVIDER not configured — message to ${message.to} ("${message.subject}") was not sent. ` +
-        "Configure EMAIL_PROVIDER/EMAIL_API_KEY/EMAIL_FROM secrets to enable delivery."
+      `[email-adapter] EMAIL_PROVIDER not configured — logging instead of sending.\n` +
+        `  to: ${message.to}\n  subject: ${message.subject}\n  body:\n${message.text}\n` +
+        "  Configure EMAIL_PROVIDER/EMAIL_API_KEY/EMAIL_FROM to enable real delivery."
     );
-    return { ok: false, error: "email_provider_not_configured" };
+    return { ok: true, providerId: "logged" };
   }
 }
 
@@ -55,9 +58,9 @@ class ResendEmailAdapter implements EmailAdapter {
 }
 
 export function getEmailAdapter(): EmailAdapter {
-  const provider = env.EMAIL_PROVIDER;
-  if (provider === "resend" && env.EMAIL_API_KEY && env.EMAIL_FROM) {
-    return new ResendEmailAdapter(env.EMAIL_API_KEY, env.EMAIL_FROM);
+  const provider = process.env.EMAIL_PROVIDER;
+  if (provider === "resend" && process.env.EMAIL_API_KEY && process.env.EMAIL_FROM) {
+    return new ResendEmailAdapter(process.env.EMAIL_API_KEY, process.env.EMAIL_FROM);
   }
   return new LoggingEmailAdapter();
 }

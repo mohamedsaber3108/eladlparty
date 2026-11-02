@@ -1,7 +1,7 @@
 import { desc, eq, sql } from "drizzle-orm";
 import { getDb } from "@/server/repositories/db";
 import * as schema from "@/db/schema";
-import { countFailedOutboxJobs } from "@/server/jobs/outbox";
+import { countFailedJobs } from "@/server/jobs/queue";
 import type { AdminDashboard } from "@/shared/contracts/admin";
 
 export async function getAdminDashboard(): Promise<AdminDashboard> {
@@ -16,7 +16,7 @@ export async function getAdminDashboard(): Promise<AdminDashboard> {
       db.select({ submissionCount: sql<number>`count(*)` }).from(schema.intakeCases),
       db.select({ mediaCount: sql<number>`count(*)` }).from(schema.storageAssets),
       db.select().from(schema.auditLogs).orderBy(desc(schema.auditLogs.id)).limit(10),
-      countFailedOutboxJobs(),
+      countFailedJobs(),
     ]);
 
   return {

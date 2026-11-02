@@ -1,39 +1,27 @@
-import { and, eq, sql } from "drizzle-orm";
-import { getDb, nowIso } from "@/server/repositories/db";
-import * as schema from "@/db/schema";
+import { getRedis } from "@/server/jobs/redis";
+import { clientIp } from "@/server/http/client-ip";
 
 /**
- * Fixed-window rate limiter backed by D1 (`rate_limit_events`). Not as precise as a Durable
- * Object token bucket, but requires no extra Cloudflare bindings and is safe under D1's
- * single-writer-per-row semantics for the traffic volumes this portal expects.
+ * Fixed-window rate limiter backed by Redis (`ioredis`), using `INCR` + `EXPIRE` on a
+ * per-window key. This replaces the earlier Postgres-table-backed limiter: Redis is the
+ * correct tool for this (sub-millisecond, naturally self-expiring, no table growth to clean
+ * up) and is already provisioned on the AWS/EC2 stack for BullMQ.
  */
 export async function consumeRateLimit(bucketKey: string, maxCount: number, windowMs: number): Promise<boolean> {
-  const db = getDb();
-  const windowStart = new Date(Math.floor(Date.now() / windowMs) * windowMs).toISOString();
-  const now = nowIso();
+  const redis = getRedis();
+  const windowStart = Math.floor(Date.now() / windowMs) * windowMs;
+  const key = `ratelimit:${bucketKey}:${windowStart}`;
 
-  const [existing] = await db
-    .select()
-    .from(schema.rateLimitEvents)
-    .where(and(eq(schema.rateLimitEvents.bucketKey, bucketKey), eq(schema.rateLimitEvents.windowStart, windowStart)))
-    .limit(1);
-
-  if (!existing) {
-    await db.insert(schema.rateLimitEvents).values({ bucketKey, windowStart, count: 1, createdAt: now }).onConflictDoNothing();
-    return true;
+  const count = await redis.incr(key);
+  if (count === 1) {
+    // Only the request that created this window's counter sets its expiry, avoiding a
+    // race where every request resets the TTL and the key never expires.
+    await redis.pexpire(key, windowMs);
   }
-
-  if (existing.count >= maxCount) return false;
-
-  await db
-    .update(schema.rateLimitEvents)
-    .set({ count: sql`${schema.rateLimitEvents.count} + 1` })
-    .where(eq(schema.rateLimitEvents.id, existing.id));
-  return true;
+  return count <= maxCount;
 }
 
 /** Derives a stable per-IP bucket key, falling back to a shared bucket if no IP header is present. */
 export function ipBucketKey(request: Request, scope: string): string {
-  const ip = request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for") ?? "unknown";
-  return `${scope}:${ip}`;
+  return `${scope}:${clientIp(request) ?? "unknown"}`;
 }
